@@ -1,6 +1,4 @@
 .article-list {
-  max-width: var(--grid-container-width);
-  margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--spacing-l);
