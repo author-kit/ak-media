@@ -11,9 +11,14 @@
   }
 }
 
-
 @media (width >= 900px) {
   .article-list {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (width >= 1200px) {
+  .article-list {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
