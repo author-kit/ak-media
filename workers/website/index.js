@@ -89,10 +89,11 @@ const formatSearchParams = (url) => {
 };
 
 const formatRequest = (env, request, url) => {
-  url.hostname = env.AEM_HOSTNAME;
-  url.port = '';
-  url.protocol = 'https:';
-  const req = new Request(url, request);
+  const aemUrl = new URL(url.href);
+  aemUrl.hostname = env.AEM_HOSTNAME;
+  aemUrl.port = '';
+  aemUrl.protocol = 'https:';
+  const req = new Request(aemUrl, request);
   req.headers.set('x-forwarded-host', req.headers.get('host'));
   req.headers.set('x-byo-cdn-type', 'cloudflare');
   if (env.PUSH_INVALIDATION !== 'disabled') {
@@ -120,6 +121,6 @@ export default {
 
     const { handler, cache } = ROUTES.find((route) => route.match(url.pathname));
 
-    return handler({ request, url, cache, savedSearch });
+    return handler({ url, env, request, cache, savedSearch });
   },
 };

@@ -1,3 +1,11 @@
+import formatRss from '../formatters/rss.js';
+
+const findSheetValue = (data, key) => {
+  const found = data.find((row) => row.key === key);
+  if (found) return found.value;
+  return `No ${key} found.`;
+};
+
 const getRedirect = (resp, savedSearch) => {
   if (!(resp.status === 301 && savedSearch)) return;
   const location = resp.headers.get('location');
@@ -49,20 +57,45 @@ export const fetchFromAem = async ({ request, cache, savedSearch }) => {
   return resp;
 };
 
-export async function fetchRssFeed({ request, cache, savedSearch }) {
+export async function fetchRssFeed({ url, request, cache, savedSearch }) {
   const detailsUrl = request.url.replace('.xml', '.json');
   const detailsReq = new Request(detailsUrl, request);
-  const details = fetchFromAem({ request: detailsReq, cache, savedSearch });
+  const detailsLoading = fetchFromAem({ request: detailsReq, cache, savedSearch });
 
   const listUrl = request.url.replace('rss.xml', 'query-index.json');
   const listReq = new Request(listUrl, request);
-  const feed = fetchFromAem({ request: listReq, cache, savedSearch });
+  const feedLoading = fetchFromAem({ request: listReq, cache, savedSearch });
 
-  await Promise.all([details, feed]);
+  const [details, feed] = await Promise.all([detailsLoading, feedLoading]);
 
-  console.log(feed);
+  // Handle 304 Not Modified responses
+  if (details.status === 304 || feed.status === 304) {
+    return new Response(null, { status: 304, headers: details.headers });
+  }
 
-  return new Response('RSS Handled', { status: 200 });
+  const { data: detailsData } = await details.json();
+  const { data: feedDataRaw } = await feed.json();
+
+  const feedData = feedDataRaw.map((article) => ({
+    title: article.title,
+    description: article.description,
+    link: `${url.origin}${article.path}`,
+  }));
+
+  const xml = formatRss(
+    {
+      title: findSheetValue(detailsData, 'title'),
+      link: `${url.origin}${url.pathname.replace('rss.xml', '')}`,
+      description: findSheetValue(detailsData, 'description'),
+      feedUrl: `${url.origin}${url.pathname}${savedSearch}`,
+    },
+    feedData,
+  );
+
+  const headers = new Headers(details.headers);
+  headers.set('Content-Type', 'application/rss+xml; charset=utf-8');
+
+  return new Response(xml, { status: details.status, headers });
 }
 
 export function fetchPodcastFeed() {
