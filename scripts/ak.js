@@ -45,35 +45,40 @@ export async function loadStyle(href) {
   });
 }
 
+export async function loadExperience(el, type, name, style, decorate) {
+  const { codeBase } = getConfig();
+  const path = `${codeBase}/${type}/${name}/${name}`;
+
+  const loading = [];
+  if (decorate) {
+    loading.push(new Promise((resolve) => {
+      (async () => {
+        try {
+          await (await import(`${path}.js`)).default(el);
+        } catch (ex) { await getConfig().log(ex, el); }
+        resolve();
+      })();
+    }));
+  }
+  if (style) loading.push(loadStyle(`${path}.css`));
+  await Promise.all(loading);
+  return el;
+}
+
 export async function loadBlock(block) {
   const { components } = getConfig();
-  const { classList } = block;
-  const name = classList[0];
+  const [name] = block.classList;
   block.dataset.blockName = name;
-  const blockPath = `/blocks/${name}/${name}`;
-  const loaded = [new Promise((resolve) => {
-    (async () => {
-      try {
-        await (await import(`${blockPath}.js`)).default(block);
-      } catch (ex) { await getConfig().log(ex, block); }
-      resolve();
-    })();
-  })];
-  const isCmp = components.some((cmp) => name === cmp);
-  if (!isCmp) loaded.push(loadStyle(`${blockPath}.css`));
-  await Promise.all(loaded);
+  const style = !components.some((cmp) => name === cmp);
+  await loadExperience(block, 'blocks', name, style, true);
   return block;
 }
 
-function loadTemplate() {
-  const template = getMetadata('template');
-  if (!template) return;
-  const { codeBase } = getConfig();
-  document.body.classList.add('has-template');
-  loadStyle(`${codeBase}/templates/${template}/${template}.css`).then(() => {
-    document.body.classList.add(`${template}-template`);
-    document.body.classList.remove('has-template');
-  });
+async function loadTemplate() {
+  const name = getMetadata('template');
+  if (!name) return;
+  await loadExperience(document.body, 'templates', name, true, true);
+  document.body.classList.add(`${name}-template`);
 }
 
 function decoratePictures(el) {
@@ -266,26 +271,24 @@ function decorateHeader() {
   if (breadcrumbs) header.append(breadcrumbs);
 }
 
-function decorateDoc() {
+async function decorateDoc() {
   decorateHeader();
-  loadTemplate();
+  await loadTemplate();
 
-  // Setup scheme
   const scheme = localStorage.getItem('color-scheme');
   if (scheme) document.body.classList.add(scheme);
 
-  // Detect Hash
   const pageId = window.location.hash?.replace('#', '');
   if (pageId) localStorage.setItem('lazyhash', pageId);
 }
 
 export async function loadArea({ area } = { area: document }) {
   const isDoc = area === document;
-  if (isDoc) decorateDoc();
   decoratePictures(area);
   const { decorateArea } = getConfig();
   if (decorateArea) decorateArea({ area });
   const sections = decorateSections(area, isDoc);
+  if (isDoc) await decorateDoc();
   for (const [idx, section] of sections.entries()) {
     loadIcons(section);
     await Promise.all(section.widgets.map((block) => loadBlock(block)));
