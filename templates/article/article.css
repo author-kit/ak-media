@@ -1,7 +1,17 @@
+article {
+  section.article-content {
+    display: grid;
+    grid-template-columns: 1.4fr 0.6fr;
+    max-width: var(--grid-container-width);
+    margin: 0 auto;
+  }
+}
+
 .article-hero {
   position: relative;
   padding: 64px 0;
   margin-bottom: 128px;
+  grid-area: hero;
 
   .article-hero-background-overlay {
     position: absolute;

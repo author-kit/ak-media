@@ -17,6 +17,7 @@ const widgets = [
   { fragment: '/fragments/' },
   { schedule: '/schedules/' },
   { youtube: 'https://www.youtube' },
+  { share: '/tools/widgets/share' },
   { 'article-list': '/tools/widgets/article-list' },
 ];
 

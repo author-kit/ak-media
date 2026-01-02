@@ -1,12 +1,12 @@
-import { getConfig, getMetadata, loadStyle } from '../../scripts/ak.js';
-
-const { codeBase } = getConfig();
+import { getMetadata, loadArea } from '../../scripts/ak.js';
 
 async function loadAuthor() {
 }
 
 function buildArticleHero() {
   const pic = document.querySelector('picture');
+  const picPara = pic.parentElement;
+
   const title = document.querySelector('h1');
 
   const bg = pic.cloneNode(true);
@@ -22,13 +22,20 @@ function buildArticleHero() {
   overlay.className = 'article-hero-background-overlay';
 
   fgMedia.append(pic);
+  if (picPara.children.length === 0) {
+    picPara.remove();
+  }
 
   const fgText = document.createElement('div');
   fgText.className = 'article-hero-foreground-text';
 
+  const dateMeta = getMetadata('publication-date');
+  const rawDate = new Date(dateMeta);
+  const dateText = rawDate.toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' });
+
   const date = document.createElement('p');
   date.className = 'article-date';
-  date.textContent = getMetadata('publication-date') || 'No publish date';
+  date.textContent = dateText;
 
   const author = document.createElement('a');
   author.className = 'article-author';
@@ -47,9 +54,47 @@ function buildArticleHero() {
   return section;
 }
 
-export default function init() {
-  const hero = buildArticleHero();
+function buildArticleBody(main) {
+  const contents = main.querySelectorAll(':scope > *');
+  const section = document.createElement('section');
+  section.className = 'article-body';
 
+  section.append(...contents);
+
+  return section;
+}
+
+function buildArticleAside() {
+  const aside = document.createElement('aside');
+  aside.className = 'article-share';
+
+  const link = document.createElement('a');
+  link.href = '/tools/widgets/share.html';
+  link.textContent = 'Share - All platforms';
+
+  const section = document.createElement('div');
+  section.append(link);
+
+  aside.append(section);
+
+  loadArea({ area: aside });
+
+  return aside;
+}
+
+export default function init() {
   const main = document.querySelector('main');
-  main.prepend(hero);
+
+  const hero = buildArticleHero();
+  const body = buildArticleBody(main);
+  const share = buildArticleAside();
+
+  const section = document.createElement('section');
+  section.className = 'article-content';
+  section.append(body, share);
+
+  const article = document.createElement('article');
+  article.append(hero, section);
+
+  main.append(article);
 }
